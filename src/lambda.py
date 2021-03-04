@@ -34,6 +34,7 @@ import sys
 # Required to load modules from vendored subfolder (for clean development env)
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "./vendored"))
 
+import calendar
 import boto3
 import datetime
 import logging
@@ -50,9 +51,6 @@ from email.utils import COMMASPACE, formatdate
 SES_REGION = os.environ.get('SES_REGION')
 if not SES_REGION:
     SES_REGION="us-east-1"
-ACCOUNT_LABEL = os.environ.get('ACCOUNT_LABEL')
-if not ACCOUNT_LABEL:
-    ACCOUNT_LABEL = 'Email'
 
 CURRENT_MONTH = os.environ.get('CURRENT_MONTH')
 if CURRENT_MONTH == "true":
@@ -81,6 +79,9 @@ class CostExplorer:
     def __init__(self, CurrentMonth=False, YearlySummary=False):
         #Array of reports ready to be output to Excel.
         self.yearlySummary = YearlySummary
+        self.date_format = 'mmmm yyyy'
+        self.chart_start_cell = 'O2'
+        self.data_end_column = 'M'
         self.granularity = 'MONTHLY'
         self.reports = []
         self.client = boto3.client('ce', region_name='us-east-1')
@@ -92,6 +93,9 @@ class CostExplorer:
         if not self.yearlySummary:
             self.start = (datetime.date.today() - relativedelta(months=+1)).replace(day=1) #1st day of month a month ago
             self.granularity = 'DAILY'
+            self.chart_start_cell = 'AE2'
+            self.data_end_column = 'AF'
+            self.date_format = 'dd/mm/yyyy'
         else:
             # Default is last 12 months
             self.start = (datetime.date.today() - relativedelta(months=+12)).replace(day=1) #1st day of month 12 months ago
@@ -144,7 +148,8 @@ class CostExplorer:
 
             rows = []
             for v in results:
-                row = {'date':v['TimePeriod']['Start']}
+                date = datetime.datetime.strptime(v['TimePeriod']['Start'], '%Y-%m-%d').strftime('%Y-%m-%d')
+                row = {'date':date}
                 row.update({'Coverage%':float(v['Total']['CoverageHours']['CoverageHoursPercentage'])})
                 rows.append(row)
 
@@ -182,7 +187,8 @@ class CostExplorer:
             rows = []
             if results:
                 for v in results:
-                    row = {'date':v['TimePeriod']['Start']}
+                    date = datetime.datetime.strptime(v['TimePeriod']['Start'], '%Y-%m-%d').strftime('%Y-%m-%d')
+                    row = {'date':date}
                     if Savings:
                         row.update({'Savings$':float(v['Total']['NetRISavings'])})
                     else:
@@ -333,19 +339,20 @@ class CostExplorer:
         rows = []
         sort = ''
         for v in results:
-            row = {'date':v['TimePeriod']['Start']}
-            sort = v['TimePeriod']['Start']
+            date = datetime.datetime.strptime(v['TimePeriod']['Start'], '%Y-%m-%d').strftime('%Y-%m-%d')
+            row = {'date':date}
+            sort = date
             for i in v['Groups']:
                 key = i['Keys'][0]
                 if key in self.accounts:
-                    key = self.accounts[key][ACCOUNT_LABEL]
+                    key = self.accounts[key]['Name'] + ' (' + self.accounts[key]['Email'] + ')'
                 row.update({key:float(i['Metrics']['UnblendedCost']['Amount'])})
             if not v['Groups']:
                 row.update({'Total':float(v['Total']['UnblendedCost']['Amount'])})
             rows.append(row)
 
         df = pd.DataFrame(rows)
-        df.set_index("date", inplace= True)
+        df.set_index('date', inplace= True)
         df = df.fillna(0.0)
 
         if Style == 'Change':
@@ -375,10 +382,17 @@ class CostExplorer:
         os.chdir('/tmp')
         writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
         workbook = writer.book
+        money_format = workbook.add_format({'num_format': '[$$-409]#,##0.00', 'valign': 'center'})
+        date_format = workbook.add_format({'num_format': self.date_format, 'align': 'center'})
+        title_format = workbook.add_format({'align': 'left', 'bold': True, 'text_wrap': True})
         for report in self.reports:
             print(report['Name'],report['Type'])
             report['Data'].to_excel(writer, sheet_name=report['Name'])
             worksheet = writer.sheets[report['Name']]
+            worksheet.set_zoom(90)
+            worksheet.set_column('A:A', 25, title_format)
+            worksheet.set_column('B:' + self.data_end_column, 14, money_format)
+            worksheet.set_row(0, 20, date_format)
             if report['Type'] == 'chart':
 
                 # Create a chart object.
@@ -386,8 +400,8 @@ class CostExplorer:
 
 
                 chartend=12
-                if CURRENT_MONTH:
-                    chartend=13
+                if not self.yearlySummary:
+                    chartend=calendar.monthrange(self.start.year, self.start.month)[1]
                 for row_num in range(1, len(report['Data']) + 1):
                     chart.add_series({
                         'name':       [report['Name'], row_num, 0],
@@ -396,10 +410,8 @@ class CostExplorer:
                     })
                 chart.set_y_axis({'label_position': 'low'})
                 chart.set_x_axis({'label_position': 'low'})
-                worksheet.insert_chart('O2', chart, {'x_scale': 2.0, 'y_scale': 2.0})
+                worksheet.insert_chart(self.chart_start_cell, chart, {'x_scale': 2.0, 'y_scale': 2.0})
         writer.save()
-
-
 
         #Time to deliver the file to S3
         if os.environ.get('S3_BUCKET'):
