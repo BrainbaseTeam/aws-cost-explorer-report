@@ -24,10 +24,21 @@ Parameters:
   CurrentMonth:
     Type: String
     Description: "true | false for if current partial month included"
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
   DayOfMonth:
     Type: Number
     Default: 6
     Description: "DayOfMonth for Schedule, default 6 - use 12 if you want to report refunds and finalised Enterprise Support."
+  TestMode:
+    Type: String
+    Description: "true | false to toggle test mode"
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
 
 Resources:
   CostExplorerReport:
@@ -55,6 +66,7 @@ Resources:
           COST_TAGS: !Ref ListOfCostTags
           ACCOUNT_LABEL: !Ref AccountLabel
           CURRENT_MONTH: !Ref CurrentMonth
+          TEST_MODE: !Ref TestMode
           INC_SUPPORT: 'false'
       Events:
         MonthlyEvent:

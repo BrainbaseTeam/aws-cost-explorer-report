@@ -5,7 +5,7 @@ export AWS_DEFAULT_REGION=us-west-2
 #Must be in same region as lambda (ie AWS_DEFAULT_REGION)
 export BUCKET=automatic-billing-reports
 #Comma Seperated list of emails to send to
-export SES_TO=argo@brainbase.com
+export SES_TO=argo@brainbase.com,karl@brainbase.com
 export SES_FROM=noreply-aws-reports@brainbase.com
 export SES_REGION=us-west-2
 #Comma Seperated list of Cost Allocation Tags (must be configured in AWS billing prefs)
@@ -14,6 +14,8 @@ export COST_TAGS=CostGroup
 export CURRENT_MONTH=false
 #Day of Month, leave as 6 unless you want to capture refunds and final support values, then change to 12
 export DAY_MONTH=6
+# Enable / disable test mode
+export TEST_MODE=false
 
 cd src
 zip -ur ../bin/lambda.zip lambda.py
@@ -30,4 +32,4 @@ aws cloudformation deploy \
   --parameter-overrides SESSendFrom=$SES_FROM S3Bucket=$BUCKET \
   SESSendTo=$SES_TO SESRegion=$SES_REGION \
   AccountLabel=Email ListOfCostTags=$COST_TAGS CurrentMonth=$CURRENT_MONTH \
-  DayOfMonth=$DAY_MONTH
+  DayOfMonth=$DAY_MONTH TestMode=$TEST_MODE

@@ -52,6 +52,12 @@ SES_REGION = os.environ.get('SES_REGION')
 if not SES_REGION:
     SES_REGION="us-east-1"
 
+TEST_MODE = os.environ.get('TEST_MODE')
+if TEST_MODE == "true":
+    TEST_MODE = True
+else:
+    TEST_MODE = False
+
 CURRENT_MONTH = os.environ.get('CURRENT_MONTH')
 if CURRENT_MONTH == "true":
     CURRENT_MONTH = True
@@ -373,7 +379,11 @@ class CostExplorer:
 
 
     def generateExcel(self):
-        file_name = 'cost_explorer_report_yearly_' + str(self.start.year) + '.xlsx'
+        file_name_prefix = ''
+        if TEST_MODE:
+            file_name_prefix = 'test_'
+
+        file_name = file_name_prefix + 'cost_explorer_report_yearly_' + str(self.start.year) + '.xlsx'
         if not self.yearlySummary:
             month = self.start.strftime("%B").lower()
             file_name = 'cost_explorer_report_' + month + '_' + str(self.start.year) + '.xlsx'
@@ -422,13 +432,19 @@ class CostExplorer:
             if self.yearlySummary:
                 subject_prefix = 'Yearly'
 
+            test_mode_prefix = ''
+            testing_text = ''
+            if TEST_MODE:
+                test_mode_prefix = '[TEST] '
+                testing_text = "\n**********************************************\n* This email is for testing purposes only *\n**********************************************\n\n"
+
             #Email logic
             msg = MIMEMultipart()
             msg['From'] = os.environ.get('SES_FROM')
             msg['To'] = COMMASPACE.join(os.environ.get('SES_SEND').split(','))
             msg['Date'] = formatdate(localtime=True)
-            msg['Subject'] = subject_prefix + ' Cost Explorer Report'
-            text = "Find your Cost Explorer report attached\n\n"
+            msg['Subject'] = test_mode_prefix + subject_prefix + ' Cost Explorer Report'
+            text = "Hi,\n" + testing_text + "Find your Cost Explorer report attached\n\n"
             msg.attach(MIMEText(text))
             with open(file_name, "rb") as fil:
                 part = MIMEApplication(
