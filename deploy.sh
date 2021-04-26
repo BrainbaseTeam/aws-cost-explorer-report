@@ -5,11 +5,11 @@ export AWS_DEFAULT_REGION=us-west-2
 #Must be in same region as lambda (ie AWS_DEFAULT_REGION)
 export BUCKET=automatic-billing-reports
 #Comma Seperated list of emails to send to
-export SES_TO=argo@brainbase.com,karl@brainbase.com
+export SES_TO=argo@brainbase.com,karl@brainbase.com,henri@brainbase.com,logan@brainbase.com
 export SES_FROM=noreply-aws-reports@brainbase.com
 export SES_REGION=us-west-2
 #Comma Seperated list of Cost Allocation Tags (must be configured in AWS billing prefs)
-export COST_TAGS=CostGroup
+export COST_TAGS=brainbase:team,brainbase:environment
 #Do you want partial figures for the current month (set to true if running weekly/daily)
 export CURRENT_MONTH=false
 #Day of Month, leave as 6 unless you want to capture refunds and final support values, then change to 12

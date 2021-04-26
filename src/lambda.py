@@ -472,12 +472,13 @@ def main_handler(event, context=None):
     costexplorer.addReport(Name="AccountsChange", GroupBy=[{"Type": "DIMENSION","Key": "LINKED_ACCOUNT"}],Style='Change')
     costexplorer.addReport(Name="Regions", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Total')
     costexplorer.addReport(Name="RegionsChange", GroupBy=[{"Type": "DIMENSION","Key": "REGION"}],Style='Change')
-    if event.get('yearlySummary', False):
-        if os.environ.get('COST_TAGS'): #Support for multiple/different Cost Allocation tags
+    if os.environ.get('COST_TAGS'): #Support for multiple/different Cost Allocation tags
             for tagkey in os.environ.get('COST_TAGS').split(','):
                 tabname = tagkey.replace(":",".") #Remove special chars from Excel tabname
                 costexplorer.addReport(Name="{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Total')
                 costexplorer.addReport(Name="Change-{}".format(tabname)[:31], GroupBy=[{"Type": "TAG","Key": tagkey}],Style='Change')
+
+    if event.get('yearlySummary', False):
         #Overall Billing Reports
         costexplorer.addReport(Name="Total", GroupBy=[],Style='Total',IncSupport=True)
         costexplorer.addReport(Name="TotalChange", GroupBy=[],Style='Change')
@@ -485,12 +486,12 @@ def main_handler(event, context=None):
         costexplorer.addReport(Name="TotalInclCreditsChange", GroupBy=[],Style='Change',NoCredits=False)
         costexplorer.addReport(Name="Credits", GroupBy=[],Style='Total',CreditsOnly=True)
         costexplorer.addReport(Name="Refunds", GroupBy=[],Style='Total',RefundOnly=True)
-        costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
+        # costexplorer.addReport(Name="RIUpfront", GroupBy=[],Style='Total',UpfrontOnly=True)
         #RI Reports
-        costexplorer.addRiReport(Name="RICoverage")
-        costexplorer.addRiReport(Name="RIUtilization")
-        costexplorer.addRiReport(Name="RIUtilizationSavings", Savings=True)
-        costexplorer.addRiReport(Name="RIRecommendation") #Service supported value(s): Amazon Elastic Compute Cloud - Compute, Amazon Relational Database Service
+        # costexplorer.addRiReport(Name="RICoverage")
+        # costexplorer.addRiReport(Name="RIUtilization")
+        # costexplorer.addRiReport(Name="RIUtilizationSavings", Savings=True)
+        # costexplorer.addRiReport(Name="RIRecommendation") #Service supported value(s): Amazon Elastic Compute Cloud - Compute, Amazon Relational Database Service
 
     costexplorer.generateExcel()
     return "Report Generated"
